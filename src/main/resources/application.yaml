@@ -1,0 +1,103 @@
+apis:
+  version: v1
+  internal: /_api/${apis.version}
+  secure: /api/${apis.version}
+  open: /open/${apis.version}
+
+server:
+  port: 8080
+  servlet:
+    context-path: /atm-service
+  shutdown: "graceful"
+
+
+spring:
+  application:
+    name: atm-service
+  profiles:
+    active: development
+
+resilience4j:
+  retry:
+    configs:
+      default:
+        maxRetryAttempts: 2
+        waitDuration: 5000
+        ignoreExceptions:
+          - energizeglobalservices.ATMservice.config.feign.FeignException
+    instances:
+      default-config:
+        baseConfig: default
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 20
+        slidingWindowType: COUNT_BASED
+        ignoreExceptions:
+          - energizeglobalservices.ATMservice.config.feign.FeignException
+    instances:
+      default-config:
+        baseConfig: default
+
+
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 500000
+        responseTimeout: 10000
+        readTimeout: 5000 # actually readTimeout is sum of connectionTimeout and itself, so readTimeout is 10 seconds
+        errorDecoder: energizeglobalservices.ATMservice.config.feign.FeignErrorDecoder
+        loggerLevel: full
+
+
+swagger:
+  host: localhost:${server.port}
+  api:
+    title: 'ATM service'
+    description: 'Swagger 2 API Documentation'
+    termsOfServiceUrl: 'https://energize.global.services.atm-service'
+    version: ${apis.version}
+    basePackage: energizeglobalservices.ATMservice.controller
+
+
+
+services:
+  bank-service:
+    username: admin
+    password: XOusTEPXO7M9L2i9qjlR
+    url: http://localhost:8090
+    name: bank-service
+    resolve-tokens-url: /bank-service/_api/v1/tokens/resolve
+    login-url: /bank-service/api/v1/login
+    get-balance-by-account-url: /bank-service/_api/v1/bank-accounts/{bankAccountId}/balance
+    withdrawal-amount-by-account-url: /bank-service/_api/v1/bank-accounts/{bankAccountId}/withdrawal
+    deposit-amount-by-account-url: /bank-service/_api/v1/bank-accounts/{bankAccountId}/deposit
+    get-balance-by-card-url: /bank-service/_api/v1/cards/{cardId}/balance
+    withdrawal-amount-by-card-url: /bank-service/_api/v1/cards/{cardId}/withdrawal
+    deposit-amount-by-card-url: /bank-service/_api/v1/cards/{cardId}/deposit
+    card-validation-url: /bank-service/_api/v1/cards/{cardNumber}/validation
+
+
+
+
+
+
+
+
+energize-global-services:
+  feign:
+    connection-timeout: 10000
+    response-timeout: 10000
+  jwt:
+    secret: 'changeit'
+    access-token-validity-in-minute: 100
+    refresh-token-validity-in-minute: 200
+
+---
+spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ANT_PATH_MATCHER
+
